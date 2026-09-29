@@ -1,0 +1,16 @@
+# 构建产物与缓存：不进仓库
+.cache/
+dist/
+
+# 测试输出（每次都重新生成，且含本机路径）
+test/last-*.log
+test/last-run.log
+test/.config-guard.ini
+
+# 编辑器 / 系统的杂物
+.vs/
+*.user
+*.suo
+*.swp
+Thumbs.db
+desktop.ini

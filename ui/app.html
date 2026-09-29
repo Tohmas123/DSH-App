@@ -1,0 +1,569 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>DSH-App</title>
+<!-- Served by UiServer from the ui directory next to the exe. -->
+<link rel="icon" href="dsh.ico">
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --line: #262b36;
+    --text: #e6e8eb;
+    --dim: #9aa4b2;
+    --brand: #4d6bfe;
+    --brand-hi: #6b83ff;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-user-select: none; user-select: none;
+  }
+  .card {
+    width: 460px; padding: 34px 38px 30px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.55);
+  }
+  h1 { font-size: 20px; margin: 0 0 6px; letter-spacing: .3px; }
+  .sub { color: var(--dim); font-size: 13px; margin: 0 0 22px; }
+  .step { display: none; }
+  .step.on { display: block; }
+
+  ul.checks { list-style: none; margin: 0; padding: 0; }
+  ul.checks li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13px;
+  }
+  ul.checks li:last-child { border-bottom: 0; }
+  .dot { width: 16px; text-align: center; flex: none; font-size: 13px; }
+  .name { flex: 1; }
+  .val { color: var(--dim); font-size: 12px; font-family: Consolas, monospace; }
+  .ok { color: var(--ok); }
+  .bad { color: var(--bad); }
+  .warn { color: var(--warn); }
+
+  .bar { height: 4px; background: #22262f; border-radius: 3px; overflow: hidden; margin-top: 20px; }
+  .bar > i { display: block; height: 100%; width: 30%; background: var(--brand);
+             border-radius: 3px; animation: slide 1.2s ease-in-out infinite; }
+  @keyframes slide { 0% { margin-left: -30%; } 100% { margin-left: 100%; } }
+
+  label { display: block; font-size: 13px; margin: 0 0 7px; color: var(--dim); }
+  input[type=text], input[type=password] {
+    width: 100%; padding: 11px 13px; font-size: 14px;
+    background: #0d1016; color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px; outline: none;
+    font-family: Consolas, monospace;
+  }
+  input:focus { border-color: var(--brand); }
+  .hint { font-size: 12px; color: var(--dim); margin: 9px 0 0; line-height: 1.6; }
+  .hint a { color: var(--brand-hi); text-decoration: none; }
+  .hint a:hover { text-decoration: underline; }
+
+  button {
+    width: 100%; margin-top: 20px; padding: 12px;
+    background: var(--brand); color: #fff; border: 0; border-radius: 10px;
+    font-size: 15px; cursor: pointer; font-family: inherit;
+  }
+  button:hover { background: var(--brand-hi); }
+  button:disabled { background: #2b3242; color: #6b7280; cursor: default; }
+  .err { color: var(--bad); font-size: 12px; margin-top: 10px; min-height: 16px; }
+  .foot { margin-top: 18px; font-size: 12px; color: #5b6472; text-align: center; }
+  .guide { display: none; margin-top: 16px; padding: 14px; background: #1d1a12;
+           border: 1px solid #3d3418; border-radius: 10px; font-size: 12.5px;
+           color: #e8d9a8; line-height: 1.75; }
+  .guide.on { display: block; }
+  .guide b { color: #fbbf24; }
+
+  .actions { margin-top: 20px; }
+  .actions button { margin-top: 10px; }
+  .actions button:first-child { margin-top: 0; }
+  button.ghost {
+    background: #232833; color: var(--text); border: 1px solid #333a48;
+  }
+  button.ghost:hover { background: #2b3140; border-color: #465062; }
+  code { background: #0d1016; padding: 1px 5px; border-radius: 4px;
+         font-family: Consolas, monospace; color: #9fd0ff; }
+  /* Selecting text is the user's only way out when a link cannot be opened for
+     them, so links, code and .pick stay selectable although the app disables
+     selection generally. */
+  a, code, .pick { -webkit-user-select: text; user-select: text; }
+  .dim { color: #b9a86e; }
+
+  /* service port row (step 1) */
+  .portrow { display: flex; align-items: center; gap: 8px; margin-top: 14px;
+             font-size: 12.5px; color: var(--dim); }
+  .portrow .k { flex: none; }
+  .portrow .v { font-family: Consolas, monospace; color: var(--text); flex: 1;
+                -webkit-user-select: text; user-select: text; }
+  input.portbox { width: 78px; padding: 4px 6px; font-family: Consolas, monospace;
+                  font-size: 12.5px; background: #0d1016; color: var(--text);
+                  border: 1px solid var(--brand); border-radius: 6px; outline: none; }
+  button.mini { width: auto; margin: 0; padding: 4px 10px; font-size: 12px;
+                border-radius: 6px; background: #232833; color: var(--text);
+                border: 1px solid #333a48; cursor: pointer; }
+  button.mini:hover { background: #2b3140; border-color: #465062; }
+  .portnote { font-size: 11.5px; color: var(--dim); margin-top: 6px; min-height: 15px; }
+  .portnote.bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <!-- ── step 0: running panel ───────────────────────────────────────────
+       The window stays here instead of jumping straight into the chat, so the
+       user picks how to open it: the embedded window, or the browser. The
+       tokenised URL never enters this page -- the host keeps it and acts on the
+       messages these buttons send. -->
+  <section id="s-panel" class="step">
+    <h1>服务正在运行</h1>
+    <p class="sub" id="panel-sub">正在启动服务，首次运行需要准备文件…</p>
+    <p class="foot" style="text-align:left;margin:0 0 10px">
+      服务端口 <span id="panel-port" style="font-family:Consolas,monospace;color:#e6e8eb">—</span>
+      <span id="panel-pid-wrap" style="display:none">　进程 <span id="panel-pid" style="font-family:Consolas,monospace;color:#e6e8eb">—</span></span>
+    </p>
+    <div class="bar" id="panel-bar"><i></i></div>
+    <div class="actions" id="panel-actions" style="display:none">
+      <button id="btn-open-embedded">在内置窗口中打开</button>
+      <button class="ghost" id="btn-open-browser">在浏览器中打开</button>
+    </div>
+    <p class="hint" id="panel-hint" style="display:none">
+      两者是同一个服务，可以同时使用、互不影响。用浏览器打开后，这个窗口仍然可以继续用。
+    </p>
+    <div class="err" id="panel-open-err"></div>
+    <div class="guide" id="panel-repair-guide" style="display:none">
+      <b>缺少一个图片处理组件</b><br>
+      程序启动失败，原因通常是上次下载没装完整（缺少 <code>sharp</code> 组件）。<br>
+      点下面的按钮，程序会自己把它重新装好 —— 需要联网，可能要几分钟。
+      <button id="btn-panel-repair" style="margin-top:12px">自动修复并重试</button>
+    </div>
+    <div class="guide" id="panel-upgraded" style="display:none"></div>
+    <p class="foot">启动器 v<span id="panel-ver">—</span>　·　harness v<span id="panel-harness">—</span>　·　想换端口？用托盘图标的「修改服务端口」。</p>
+  </section>
+
+  <!-- ── step 1: environment check ───────────────────────────────────── -->
+  <section id="s-check" class="step on">
+    <h1>正在准备运行环境</h1>
+    <p class="sub">第一次启动需要检查几个组件，请稍候…</p>
+    <ul class="checks">
+      <li><span class="dot" id="d-node">·</span><span class="name">Node.js 运行环境</span><span class="val" id="v-node">检测中</span></li>
+      <li><span class="dot" id="d-dsh">·</span><span class="name">DeepSeek Harness</span><span class="val" id="v-dsh">等待中</span></li>
+      <li><span class="dot" id="d-wv">·</span><span class="name">内置浏览器内核</span><span class="val" id="v-wv">等待中</span></li>
+      <li><span class="dot" id="d-key">·</span><span class="name">API 密钥</span><span class="val" id="v-key">等待中</span></li>
+    </ul>
+    <div class="bar" id="bar"><i></i></div>
+
+    <!-- Service port. Visible before anything starts so someone who also drives the
+         harness from a terminal can put this app on a port of their own choosing
+         instead of discovering the clash later. -->
+    <div class="portrow">
+      <span class="k">服务端口</span>
+      <span class="v" id="port-view">—</span>
+      <button class="mini" id="btn-port-edit">修改</button>
+      <button class="mini" id="btn-port-save" style="display:none">保存</button>
+      <button class="mini ghost2" id="btn-port-cancel" style="display:none">取消</button>
+    </div>
+    <div class="portnote" id="port-note"></div>
+
+    <div class="guide" id="guide-node">
+      <b>需要先安装 Node.js</b><br>
+      1. 点 <a href="https://nodejs.org/" id="lnk-node">nodejs.org</a> 打开官网（用你的默认浏览器），
+      再点页面上的 <b>LTS 版</b>下载按钮（左边那个绿色的）<br>
+      2. 双击下载的文件，一路点「下一步」即可，不用改任何选项<br>
+      3. 装完后 <b>关掉本程序再重新打开</b><br>
+      <span class="dim">浏览器没自动打开？把 <b class="pick">nodejs.org</b> 复制到浏览器地址栏就行。</span>
+      <button id="btn-recheck" style="margin-top:12px">我装好了，重新检测</button>
+    </div>
+
+    <div class="guide" id="guide-oldnode">
+      <b>你的 Node.js 版本太旧，需要更新</b><br>
+      检测到：<code id="old-node-found">?</code>　需要：<code id="old-node-need">?</code> 或更高<br>
+      1. 点 <a href="https://nodejs.org/" id="lnk-oldnode">nodejs.org</a> 打开官网（默认浏览器），下载 <b>LTS 版</b><br>
+      <span class="dim">浏览器没自动打开？把 <b class="pick">nodejs.org</b> 复制到浏览器地址栏。</span><br>
+      2. 双击安装，它会自动覆盖旧版本，一路点「下一步」即可<br>
+      3. 装完后 <b>点下面的按钮重新检测</b>
+      <button id="btn-recheck2" style="margin-top:12px">我更新好了，重新检测</button>
+    </div>
+
+    <div class="guide" id="guide-dsh">
+      <b>首次运行需要下载 DeepSeek Harness</b><br>
+      这一步会自动完成，需要联网，视网速可能要几分钟。请保持网络畅通。
+    </div>
+
+    <div class="err" id="open-err"></div>
+
+    <div class="guide" id="guide-wv">
+      <b>缺少内置浏览器内核</b><br>
+      本程序依赖 Microsoft Edge WebView2 运行时。Windows 11 通常已自带；
+      若确实缺失，点 <a href="https://go.microsoft.com/fwlink/p/?LinkId=2124703" id="lnk-wv">这里</a>
+      下载微软官方的安装包，装完重新打开本程序。<br>
+      <span class="dim">打不开就手动访问 <b class="pick">developer.microsoft.com/microsoft-edge/webview2</b></span>
+    </div>
+  </section>
+
+  <!-- ── step 2: api key ────────────────────────────────────────────── -->
+  <section id="s-key" class="step">
+    <h1>填写 API 密钥</h1>
+    <p class="sub">粘贴你的 DeepSeek API Key，之后会自动记住。</p>
+    <label for="key">DeepSeek API Key</label>
+    <input type="password" id="key" placeholder="sk-..." spellcheck="false" autocomplete="off">
+    <p class="hint">
+      还没有密钥？到
+      <a href="https://platform.deepseek.com/api_keys" id="lnk-key">platform.deepseek.com</a>
+      创建一个，复制以 <code>sk-</code> 开头的那串字符。
+    </p>
+    <div class="err" id="key-err"></div>
+    <button id="btn-save">保存并开始使用</button>
+    <p class="foot">密钥只保存在本机，不会上传到任何第三方。</p>
+  </section>
+
+  <!-- ── step 3: starting the service ───────────────────────────────── -->
+  <section id="s-start" class="step">
+    <h1>正在启动服务</h1>
+    <p class="sub" id="start-msg">首次启动需要准备文件，可能要几分钟…</p>
+    <div class="bar" style="animation:none"><i style="animation:slide 1.4s ease-in-out infinite"></i></div>
+    <div class="err" id="start-err"></div>
+
+    <div class="guide" id="guide-sharp">
+      <b>缺少一个图片处理组件</b><br>
+      程序启动失败，原因通常是上次下载没装完整（缺少 <code>sharp</code> 组件）。<br>
+      点下面的按钮，程序会自己把它重新装好 —— 需要联网，可能要几分钟。
+      <button id="btn-repair" style="margin-top:12px">自动修复并重试</button>
+    </div>
+
+    <div class="actions" id="start-actions">
+      <button class="ghost" id="btn-retry">重试</button>
+    </div>
+  </section>
+
+  <!-- ── step 4: port already taken ─────────────────────────────────── -->
+  <section id="s-port" class="step">
+    <h1>端口被占用了</h1>
+    <p class="sub">本程序默认使用的端口 <code id="port-num">3080</code> 上已经有一个服务在运行。</p>
+    <p class="hint" id="port-hint"></p>
+    <div class="actions">
+      <button class="ghost" id="btn-existing">打开已在运行的窗口</button>
+      <button class="ghost" id="btn-end-orphan" style="display:none">结束那个进程并重新启动</button>
+      <button id="btn-free">换个端口重新启动</button>
+    </div>
+    <p class="foot">如果选择换端口，程序会在另一个端口上启动一套新的服务，两者互不影响。</p>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+  function host(msg) {
+    try { window.chrome.webview.postMessage(JSON.stringify(msg)); }
+    catch (e) { /* running outside the host: ignore */ }
+  }
+  function show(id) {
+    var all = document.querySelectorAll(".step");
+    for (var i = 0; i < all.length; i++) all[i].classList.remove("on");
+    $(id).classList.add("on");
+  }
+  function guide(id, on) { $(id).classList.toggle("on", !!on); }
+  function mark(key, state, text) {
+    var d = $("d-" + key), v = $("v-" + key);
+    if (state === "ok")   { d.textContent = "\u2713"; d.className = "dot ok"; }
+    if (state === "bad")  { d.textContent = "\u2715"; d.className = "dot bad"; }
+    if (state === "warn") { d.textContent = "!";     d.className = "dot warn"; }
+    if (state === "busy") { d.textContent = "\u00b7"; d.className = "dot"; }
+    if (typeof text === "string") v.textContent = text;
+  }
+
+  // host -> page
+  window.chrome.webview.addEventListener("message", function (ev) {
+    var m;
+    try { m = JSON.parse(ev.data); } catch (e) { return; }
+
+    if (m.type === "step") { mark(m.key, m.state, m.text); }
+    else if (m.type === "bar") { $("bar").style.display = m.on ? "" : "none"; }
+    else if (m.type === "guide") { guide("guide-" + m.key, m.on); }
+    else if (m.type === "oldNode") {
+      $("old-node-found").textContent = m.found || "?";
+      $("old-node-need").textContent = "v" + m.required + ".0.0";
+      guide("guide-node", false);
+      guide("guide-oldnode", true);
+    }
+    else if (m.type === "needKey") { show("s-key"); try { $("key").focus(); } catch (e) {} }
+    else if (m.type === "keyError") { $("key-err").textContent = m.text; $("btn-save").disabled = false; }
+    else if (m.type === "starting") { show("s-panel"); $("panel-bar").style.display = ""; $("panel-actions").style.display = "none"; $("panel-hint").style.display = "none"; $("panel-sub").textContent = m.text || "正在启动服务…"; }
+    else if (m.type === "progress") { $("panel-sub").textContent = m.text; }
+    else if (m.type === "failed") {
+      // The panel doubles as the status screen, so a failure is shown right where
+      // the user is looking. Its「重试」is a real retry: same port, same settings.
+      show("s-panel");
+      $("panel-bar").style.display = "none";
+      $("panel-actions").style.display = "";
+      $("panel-hint").style.display = "none";
+      $("panel-sub").textContent = "服务没能启动";
+      if (m.port) $("panel-port").textContent = m.port;
+      $("panel-open-err").textContent = m.text;
+      $("panel-repair-guide").style.display = (m.kind === "sharp") ? "" : "none";
+    }
+    else if (m.type === "repairing") {
+      show("s-panel");
+      $("panel-repair-guide").style.display = "none";
+      $("panel-open-err").textContent = "";
+      $("panel-actions").style.display = "none";
+      $("panel-hint").style.display = "none";
+      $("panel-bar").style.display = "";
+      $("panel-sub").textContent = m.text || "正在修复…";
+    }
+    else if (m.type === "openFailed") {
+      $("open-err").textContent = "没能自动打开浏览器，请手动访问：" + m.url;
+    }
+    else if (m.type === "portConflict") {
+      show("s-port");
+      $("port-num").textContent = m.port;
+      setPort(m.port);
+      $("panel-port").textContent = m.port;
+      // When the holder is recognized as one of our own leftover harnesses (the
+      // usual case right after an upgrade), offer the tidy one-click fix. When it
+      // is anything else, no button: we will not kill a stranger's process.
+      // A Windows-reserved port is the third case: nothing holds it at all, so there
+      // is no process to name and the only way forward is a different number.
+      $("btn-end-orphan").style.display = m.orphan ? "" : "none";
+      if (m.pid) $("btn-end-orphan").dataset.pid = m.pid;
+      $("port-hint").textContent = m.reserved
+        ? "这个端口不是被别的程序占用的：Windows 自己把它预留了（所以探测它会有回应，但谁也绑不上）。"
+        : (m.orphan
+           ? "占用者是本程序上一次运行留下的服务（进程号 " + m.pid + "），它没有随程序一起退出。"
+           : (m.pid
+              ? "占用者进程号 " + m.pid + "。如果那是你自己启动的 DeepSeek Harness，直接打开它就行。"
+              : "已有程序占用这个端口。"));
+      var pn = $("port-note");
+      pn.className = "portnote";
+      pn.textContent = "也可以在这里直接改成别的端口，改完会自动重启服务。";
+    }
+    else if (m.type === "portInfo") { setPort(m.port); }
+    else if (m.type === "portChanged") {
+      setPort(m.port);
+      var pn2 = $("port-note");
+      pn2.className = "portnote";
+      pn2.textContent = m.restarting
+        ? "端口已改为 " + m.port + "，正在重新启动服务…"
+        : "端口已改为 " + m.port + "，下次启动时生效。";
+      show("s-check");
+    }
+    else if (m.type === "portError") {
+      // The host refused the value. Keep the edit box and what the user typed: taking
+      // it away after they typed a port (usually because it is already in use) makes
+      // them start over just to change one digit.
+      if (document.getElementById("port-input")) {
+        var pn3 = $("port-note");
+        pn3.className = "portnote bad";
+        pn3.textContent = m.text + "（改一下上面的数字再点「保存」）";
+      } else {
+        var pn3b = $("port-note");
+        pn3b.className = "portnote bad";
+        pn3b.textContent = m.text;
+      }
+    }
+    else if (m.type === "panel") {
+      // Host -> "show the running panel". ready=0 means still starting.
+      show("s-panel");
+      if (m.version) $("panel-ver").textContent = m.version;
+      if (m.harness) $("panel-harness").textContent = m.harness;
+      // One-time note after the launcher has changed (or on the first version-aware build),
+      // so the user knows the program under them was replaced and their data was not touched.
+      //
+      // Deliberately direction-neutral ("updated: v old -> v new"): the release number is
+      // allowed to go backwards when a version was built but never handed out, and "upgraded
+      // from 1.0.1 to 1.0.0" would be nonsense the user has no way to interpret.
+      if (m.version && m.upgradedFrom) {
+        $("panel-upgraded").textContent = "启动器已更新：v" + m.upgradedFrom + " → v" + m.version
+          + "，你的对话、设置和插件都没有被改动。";
+        $("panel-upgraded").style.display = "";
+      } else {
+        $("panel-upgraded").style.display = "none";
+      }
+      $("panel-port").textContent = m.port ? m.port : "—";
+      if (m.pid) {
+        $("panel-pid").textContent = m.pid;
+        $("panel-pid-wrap").style.display = "";
+      } else {
+        $("panel-pid-wrap").style.display = "none";
+      }
+      if (m.ready) {
+        $("panel-sub").textContent = "服务已就绪，选择怎么打开：";
+        $("panel-bar").style.display = "none";
+        $("panel-actions").style.display = "";
+        $("panel-hint").style.display = "";
+      } else {
+        $("panel-sub").textContent = m.text || "正在启动服务，首次运行需要准备文件…";
+        $("panel-bar").style.display = "";
+        $("panel-actions").style.display = "none";
+        $("panel-hint").style.display = "none";
+      }
+    }
+  });
+
+  $("btn-open-embedded").addEventListener("click", function () {
+    $("panel-sub").textContent = "正在打开内置窗口…";
+    $("panel-actions").style.display = "none";
+    host({ type: "openEmbedded" });
+  });
+  $("btn-open-browser").addEventListener("click", function () {
+    host({ type: "openInBrowser" });
+  });
+  $("btn-panel-repair").addEventListener("click", function () {
+    this.disabled = true;
+    this.textContent = "正在修复，请稍候…";
+    $("panel-repair-guide").style.display = "none";
+    $("panel-open-err").textContent = "";
+    $("panel-bar").style.display = "";
+    $("panel-sub").textContent = "正在重新安装缺失的组件…需要联网，可能要几分钟";
+    host({ type: "repair" });
+  });
+
+  $("btn-save").addEventListener("click", function () {
+    var k = $("key").value.trim();
+    if (!k) { $("key-err").textContent = "请输入 API Key"; return; }
+    if (k.length < 16) { $("key-err").textContent = "这个 Key 看起来太短了，请检查是否复制完整"; return; }
+    $("key-err").textContent = "";
+    this.disabled = true;
+    host({ type: "saveKey", key: k });
+  });
+
+  $("key").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") $("btn-save").click();
+  });
+
+  $("btn-recheck").addEventListener("click", function () {
+    this.disabled = true;
+    this.textContent = "正在重新检测…";
+    host({ type: "recheck" });
+  });
+
+  $("btn-recheck2").addEventListener("click", function () {
+    this.disabled = true;
+    this.textContent = "正在重新检测…";
+    guide("guide-oldnode", false);
+    host({ type: "recheck" });
+  });
+
+  $("btn-repair").addEventListener("click", function () {
+    this.disabled = true;
+    this.textContent = "正在修复，请稍候…";
+    guide("guide-sharp", false);
+    $("start-err").textContent = "";
+    $("start-actions").style.display = "none";
+    $("start-msg").textContent = "正在重新安装缺失的组件…需要联网，可能要几分钟";
+    host({ type: "repair" });
+  });
+
+  $("btn-retry").addEventListener("click", function () {
+    $("start-err").textContent = "";
+    guide("guide-sharp", false);
+    $("start-actions").style.display = "none";
+    $("start-msg").textContent = "正在重新启动服务…";
+    // A real retry: same port, same settings. This used to send useFreePort, so the
+    // button silently changed the port instead of retrying.
+    host({ type: "retry" });
+  });
+
+  $("btn-free").addEventListener("click", function () {
+    host({ type: "useFreePort" });
+    show("s-start");
+    $("start-msg").textContent = "正在换端口启动…";
+    $("start-actions").style.display = "none";
+  });
+
+  $("btn-existing").addEventListener("click", function () {
+    host({ type: "openUrl", url: "http://127.0.0.1:" + $("port-num").textContent });
+  });
+
+  $("btn-end-orphan").addEventListener("click", function () {
+    this.disabled = true;
+    this.textContent = "正在结束并重新启动…";
+    $("port-hint").textContent = "已请求结束那个进程，稍候会自动重新启动服务。";
+    host({ type: "endOrphan", pid: parseInt(this.dataset.pid || "0", 10) });
+  });
+
+  // ── service port ────────────────────────────────────────────────────────
+  // Shown from the very first screen, so the port can be set before anything
+  // starts rather than only after a clash has already happened.
+  var svcPort = 0;
+  function setPort(p) {
+    svcPort = p || 0;
+    $("port-view").textContent = svcPort ? svcPort : "—";
+    var existing = document.getElementById("port-input");
+    if (existing) existing.value = svcPort;
+  }
+  function startPortEdit() {
+    if (document.getElementById("port-input")) return;
+    var view = $("port-view");
+    var inp = document.createElement("input");
+    inp.type = "text";
+    inp.id = "port-input";
+    inp.className = "portbox";
+    inp.value = svcPort ? String(svcPort) : "";
+    view.style.display = "none";
+    view.parentNode.insertBefore(inp, view);
+    inp.focus();
+    inp.select();
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") savePortEdit();
+      if (e.key === "Escape") cancelPortEdit();
+    });
+    $("btn-port-edit").style.display = "none";
+    $("btn-port-save").style.display = "";
+    $("btn-port-cancel").style.display = "";
+    $("port-note").className = "portnote";
+    $("port-note").textContent = "填 1024 到 65535 之间的数字。";
+  }
+  function cancelPortEdit() {
+    var inp = document.getElementById("port-input");
+    if (inp) inp.parentNode.removeChild(inp);
+    $("port-view").style.display = "";
+    $("btn-port-edit").style.display = "";
+    $("btn-port-save").style.display = "none";
+    $("btn-port-cancel").style.display = "none";
+  }
+  function savePortEdit() {
+    var inp = document.getElementById("port-input");
+    if (!inp) return;
+    var v = parseInt(inp.value, 10);
+    if (!v || v < 1024 || v > 65535) {
+      $("port-note").className = "portnote bad";
+      $("port-note").textContent = "端口要填 1024 到 65535 之间的数字。";
+      return;
+    }
+    host({ type: "setPort", port: v });
+    // The host answers with portChanged (saved) or portError (refused).
+  }
+  $("btn-port-edit").addEventListener("click", function () { startPortEdit(); });
+  $("btn-port-save").addEventListener("click", function () { savePortEdit(); });
+  $("btn-port-cancel").addEventListener("click", function () {
+    cancelPortEdit();
+    $("port-note").className = "portnote";
+    $("port-note").textContent = "";
+  });
+
+  var a1 = $("lnk-node"), a2 = $("lnk-key"), a3 = $("lnk-oldnode"), a4 = $("lnk-wv");
+  if (a1) a1.addEventListener("click", function (e) { e.preventDefault(); host({ type: "openUrl", url: this.href }); });
+  if (a2) a2.addEventListener("click", function (e) { e.preventDefault(); host({ type: "openUrl", url: this.href }); });
+  if (a3) a3.addEventListener("click", function (e) { e.preventDefault(); host({ type: "openUrl", url: this.href }); });
+  if (a4) a4.addEventListener("click", function (e) { e.preventDefault(); host({ type: "openUrl", url: this.href }); });
+
+  host({ type: "uiReady" });
+})();
+</script>
+</body>
+</html>

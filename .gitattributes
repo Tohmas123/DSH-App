@@ -1,0 +1,16 @@
+# 这个仓库是 Windows 专用的，而且构建对**字节**敏感：
+#   * 所有含中文的 .cs / .html 必须是 UTF-8 **带 BOM**（无 BOM 时 csc 会按 GBK 解码 → 乱码，
+#     但编译仍然"成功"，所以构建脚本里有一条字节级检查，见 build/encoding.ps1）；
+#   * 测试脚本按约定是纯 ASCII、无 BOM；
+#   * .ps1 里的中文在 PowerShell 5.1 下会被按 ANSI 解码，这是项目里踩过四次的坑。
+#
+# 所以这里**关掉 git 的一切换行/编码归一化**：仓库里存的就是磁盘上的字节，
+# 克隆出来就是能直接构建的那份。不要改成 text=auto。
+* -text
+
+# 二进制资源，明确标出来（免得以后有人加 diff 规则）
+*.ico binary
+*.exe binary
+*.dll binary
+*.dat binary
+*.nupkg binary
